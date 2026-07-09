@@ -71,17 +71,14 @@ enum MenuState {
   STATE_SET_DISCONNECT_MODE,
   STATE_SET_SCREENSAVER_TIMEOUT,
   STATE_SET_FADE_TIME,
-  STATE_MENU_CUES,        // Select CUE index (1 to 10)
-  STATE_MENU_CUE_ACTION,  // Select Play / Record / Back
-  STATE_PLAYING_CUE,      // Playback mode screen
-  STATE_CUE_FEEDBACK      // Action feedback screen (brief auto-dismiss message)
+  STATE_MENU_CUES,       // Select CUE index (1 to 10)
+  STATE_MENU_CUE_ACTION, // Select Play / Record / Back
+  STATE_PLAYING_CUE,     // Playback mode screen
+  STATE_CUE_FEEDBACK     // Action feedback screen (brief auto-dismiss message)
 };
 
 // Feedback Types
-enum FeedbackType {
-  FEEDBACK_RECORDED,
-  FEEDBACK_DELETED
-};
+enum FeedbackType { FEEDBACK_RECORDED, FEEDBACK_DELETED };
 
 // Disconnect Modes
 enum DisconnectMode { MODE_BLACKOUT = 0, MODE_HOLD_LAST = 1 };
@@ -98,18 +95,15 @@ enum MenuItem {
 };
 
 static const char *menuItemNames[ITEM_COUNT] = {
-  "DMX Refresh Rate",
-  "On Disconnect",
-  "Screensaver Time",
-  "Fade Time",
-  "CUEs",
-  "Exit"
-};
+    "DMX Refresh Rate", "On Disconnect", "Screensaver Time",
+    "Fade Time",        "CUEs",          "Exit"};
 
 // CUE Storage Constants
 #define CUE_SIZE 1024 // 512 bytes Universe 1 + 512 bytes Universe 2
 #define NUM_CUES 10
-#define FLASH_CUES_OFFSET 0x80000 // 512 KB offset from start of flash (safe from sketch & filesystem sectors)
+#define FLASH_CUES_OFFSET                                                      \
+  0x80000 // 512 KB offset from start of flash (safe from sketch & filesystem
+          // sectors)
 #define FLASH_CUES_ADDR (XIP_BASE + FLASH_CUES_OFFSET)
 #define EEPROM_CUE_RECORDED_START_ADDR 10
 
@@ -127,18 +121,22 @@ static bool universeTimedOut[2] = {false,
 
 static bool cueRecorded[NUM_CUES] = {false}; // Track if each CUE is saved
 static int cueMenuCursor = 0; // Selector cursor for CUE list menu
-static int cueActionCursor = 0; // Selector cursor for CUE action menu (Play/Record/Back)
+static int cueActionCursor =
+    0; // Selector cursor for CUE action menu (Play/Record/Back)
 static int selectedCue = 0; // Currently selected CUE index (0..9)
 static int playingCue = -1; // Currently playing CUE index (0..9), or -1 if live
-static FeedbackType activeFeedback = FEEDBACK_RECORDED; // Current feedback to display
+static FeedbackType activeFeedback =
+    FEEDBACK_RECORDED;                      // Current feedback to display
 static unsigned long feedbackStartTime = 0; // Millis when feedback view started
-static unsigned long lastUserInteractionTime = 0; // Tracks last user interaction (button press)
+static unsigned long lastUserInteractionTime =
+    0; // Tracks last user interaction (button press)
 static bool screenSaverActive = false; // Tracks if OLED screensaver is active
 
-static uint8_t screensaverTimeoutSetting = 60; // Screensaver timeout in seconds (0 = disabled)
+static uint8_t screensaverTimeoutSetting =
+    60; // Screensaver timeout in seconds (0 = disabled)
 static uint8_t tempScreensaverTimeout = 60; // Temporary value for setting edit
 static uint8_t fadeTimeSetting = 3; // Fade time in seconds for CUE transitions
-static uint8_t tempFadeTime = 3; // Temporary value for fade time edit
+static uint8_t tempFadeTime = 3;    // Temporary value for fade time edit
 
 // DMX state tracker and crossfade engine
 static uint8_t currentDmxValues[2][512] = {{0}, {0}};
@@ -217,11 +215,13 @@ void saveSettings() {
 
 void recordCue(int cueIdx) {
   extern EnttecPro enttecPro;
-  if (cueIdx < 0 || cueIdx >= NUM_CUES) return;
+  if (cueIdx < 0 || cueIdx >= NUM_CUES)
+    return;
 
   // Allocate a temporary buffer for all 10 CUEs in RAM
   uint8_t *tempBuffer = (uint8_t *)malloc(NUM_CUES * CUE_SIZE);
-  if (!tempBuffer) return;
+  if (!tempBuffer)
+    return;
 
   // Copy current flash CUE contents into RAM buffer
   const uint8_t *flash_cues_ptr = (const uint8_t *)FLASH_CUES_ADDR;
@@ -234,13 +234,13 @@ void recordCue(int cueIdx) {
 
   // Disable interrupts and reprogram flash
   uint32_t ints = save_and_disable_interrupts();
-  
+
   // Erase 3 sectors (12 KB) at offset FLASH_CUES_OFFSET
   flash_range_erase(FLASH_CUES_OFFSET, 3 * FLASH_SECTOR_SIZE);
-  
+
   // Program 10,240 bytes at offset FLASH_CUES_OFFSET
   flash_range_program(FLASH_CUES_OFFSET, tempBuffer, NUM_CUES * CUE_SIZE);
-  
+
   restore_interrupts(ints);
 
   free(tempBuffer);
@@ -296,7 +296,7 @@ void setup() {
 
   if (hasDisplay) {
     display.clearDisplay();
-    
+
     // Draw Bun
     display.fillRoundRect(38, 6, 52, 22, 8, SSD1306_WHITE);
     // Draw Contrast Outline (separation between bun & sausage)
@@ -308,18 +308,18 @@ void setup() {
       display.drawLine(x, 15, x + 4, 19, SSD1306_BLACK);
       display.drawLine(x + 4, 19, x + 8, 15, SSD1306_BLACK);
     }
-    
+
     // Draw Brand Name
     display.setTextColor(SSD1306_WHITE);
     display.setTextSize(2);
     display.setCursor(16, 32);
     display.print("KM Light");
-    
+
     // Draw Subtitle
     display.setTextSize(1);
     display.setCursor(13, 52);
     display.print("DMX Pro Interface");
-    
+
     display.display();
     delay(2000); // 2-second splash screen duration
   }
@@ -352,7 +352,8 @@ void setup() {
 // =============================================================================
 // DMX Crossfader Engine
 // =============================================================================
-void startCrossFade(const uint8_t* targetU1, const uint8_t* targetU2, unsigned long durationMs) {
+void startCrossFade(const uint8_t *targetU1, const uint8_t *targetU2,
+                    unsigned long durationMs) {
   if (durationMs == 0) {
     if (targetU1) {
       dmxOutput.setData(0, targetU1, 512);
@@ -365,7 +366,7 @@ void startCrossFade(const uint8_t* targetU1, const uint8_t* targetU2, unsigned l
     isCrossFading = false;
     return;
   }
-  
+
   if (targetU1) {
     memcpy(crossFadeStartBuffer[0], currentDmxValues[0], 512);
     memcpy(crossFadeTargetBuffer[0], targetU1, 512);
@@ -373,7 +374,7 @@ void startCrossFade(const uint8_t* targetU1, const uint8_t* targetU2, unsigned l
     memcpy(crossFadeStartBuffer[0], currentDmxValues[0], 512);
     memcpy(crossFadeTargetBuffer[0], currentDmxValues[0], 512);
   }
-  
+
   if (targetU2) {
     memcpy(crossFadeStartBuffer[1], currentDmxValues[1], 512);
     memcpy(crossFadeTargetBuffer[1], targetU2, 512);
@@ -381,21 +382,22 @@ void startCrossFade(const uint8_t* targetU1, const uint8_t* targetU2, unsigned l
     memcpy(crossFadeStartBuffer[1], currentDmxValues[1], 512);
     memcpy(crossFadeTargetBuffer[1], currentDmxValues[1], 512);
   }
-  
+
   crossFadeStartTime = millis();
   crossFadeDuration = durationMs;
   isCrossFading = true;
 }
 
 void updateCrossFade() {
-  if (!isCrossFading) return;
-  
+  if (!isCrossFading)
+    return;
+
   float progress = (float)(millis() - crossFadeStartTime) / crossFadeDuration;
   if (progress >= 1.0f) {
     progress = 1.0f;
     isCrossFading = false;
   }
-  
+
   static uint8_t tempBuffer[512];
   for (int port = 0; port < 2; port++) {
     for (int ch = 0; ch < 512; ch++) {
@@ -427,6 +429,39 @@ void drawMenuItem(const char *label, bool selected, int y) {
     display.print("   ");
     display.print(label);
   }
+}
+
+// =============================================================================
+// Helper to draw a vertical scrollbar on the right edge of the OLED screen
+// =============================================================================
+void drawScrollBar(int currentItem, int totalItems, int itemsPerPage,
+                   int yStart, int yEnd) {
+  if (totalItems <= itemsPerPage)
+    return;
+
+  int scrollBarX = 124;
+  int scrollBarWidth = 3;
+  int height = yEnd - yStart;
+
+  // Track limits (top and bottom horizontal lines)
+  display.drawFastHLine(scrollBarX - 1, yStart, 5, SSD1306_WHITE);
+  display.drawFastHLine(scrollBarX - 1, yEnd - 1, 5, SSD1306_WHITE);
+
+  // Track vertical line
+  display.drawFastVLine(scrollBarX + 1, yStart, height, SSD1306_WHITE);
+
+  // Proportional handle height
+  int handleHeight = (height * itemsPerPage) / totalItems;
+  if (handleHeight < 6)
+    handleHeight = 6;
+
+  // Position mapped to currentItem
+  int handleY =
+      yStart + (currentItem * (height - handleHeight)) / (totalItems - 1);
+
+  // Draw the handle
+  display.fillRect(scrollBarX, handleY, scrollBarWidth, handleHeight,
+                   SSD1306_WHITE);
 }
 
 // =============================================================================
@@ -485,9 +520,11 @@ void loop() {
     }
   }
 
-  // Check if screensaver should turn on (based on screensaverTimeoutSetting in seconds, 0 = disabled)
-  if (screensaverTimeoutSetting > 0 && !screenSaverActive && 
-      (millis() - lastUserInteractionTime >= (unsigned long)screensaverTimeoutSetting * 1000)) {
+  // Check if screensaver should turn on (based on screensaverTimeoutSetting in
+  // seconds, 0 = disabled)
+  if (screensaverTimeoutSetting > 0 && !screenSaverActive &&
+      (millis() - lastUserInteractionTime >=
+       (unsigned long)screensaverTimeoutSetting * 1000)) {
     screenSaverActive = true;
     display.ssd1306_command(SSD1306_DISPLAYOFF);
   }
@@ -598,10 +635,12 @@ void loop() {
           if (disconnectModeSetting == MODE_BLACKOUT) {
             uint8_t zeroData[DMX_CHANNELS_MAX] = {0};
             dmxOutput.setData(port, zeroData, DMX_CHANNELS_MAX);
-          } else if (disconnectModeSetting >= 2 && disconnectModeSetting <= 11) {
+          } else if (disconnectModeSetting >= 2 &&
+                     disconnectModeSetting <= 11) {
             int cueIdx = disconnectModeSetting - 2;
             const uint8_t *flash_cues_ptr = (const uint8_t *)FLASH_CUES_ADDR;
-            const uint8_t *cue_ptr = flash_cues_ptr + (cueIdx * CUE_SIZE) + (port * 512);
+            const uint8_t *cue_ptr =
+                flash_cues_ptr + (cueIdx * CUE_SIZE) + (port * 512);
             dmxOutput.setData(port, cue_ptr, 512);
           }
         }
@@ -660,7 +699,7 @@ void loop() {
     } else if (k3Pressed) { // Scroll Down
       cueMenuCursor = (cueMenuCursor + 1) % (NUM_CUES + 1);
       lastOledUpdate = 0;
-    } else if (k4Pressed) { // Enter
+    } else if (k4Pressed) {            // Enter
       if (cueMenuCursor == NUM_CUES) { // Back item
         currentMenuState = STATE_MENU_MAIN;
         mainMenuCursor = ITEM_CUES;
@@ -677,12 +716,13 @@ void loop() {
       cueMenuCursor = selectedCue;
       lastOledUpdate = 0;
     } else if (k2Pressed) { // Scroll Up
-      cueActionCursor = (cueActionCursor - 1 + 4) % 4; // 4 actions: Play, Record, Delete, Back
+      cueActionCursor = (cueActionCursor - 1 + 4) %
+                        4; // 4 actions: Play, Record, Delete, Back
       lastOledUpdate = 0;
     } else if (k3Pressed) { // Scroll Down
       cueActionCursor = (cueActionCursor + 1) % 4;
       lastOledUpdate = 0;
-    } else if (k4Pressed) { // Enter
+    } else if (k4Pressed) {       // Enter
       if (cueActionCursor == 0) { // Play
         if (cueRecorded[selectedCue]) {
           playingCue = selectedCue;
@@ -690,7 +730,8 @@ void loop() {
           // Start crossfade into the CUE values
           const uint8_t *flash_cues_ptr = (const uint8_t *)FLASH_CUES_ADDR;
           const uint8_t *cue_ptr = flash_cues_ptr + (playingCue * CUE_SIZE);
-          startCrossFade(cue_ptr, cue_ptr + 512, (unsigned long)fadeTimeSetting * 1000);
+          startCrossFade(cue_ptr, cue_ptr + 512,
+                         (unsigned long)fadeTimeSetting * 1000);
         }
       } else if (cueActionCursor == 1) { // Record
         recordCue(selectedCue);
@@ -715,10 +756,10 @@ void loop() {
   } else if (currentMenuState == STATE_PLAYING_CUE) {
     if (k1Pressed || k4Pressed) { // Stop
       // Start crossfade out of the CUE back to live USB DMX
-      const uint8_t* liveU1 = enttecPro.getDmxData(0);
-      const uint8_t* liveU2 = enttecPro.getDmxData(1);
+      const uint8_t *liveU1 = enttecPro.getDmxData(0);
+      const uint8_t *liveU2 = enttecPro.getDmxData(1);
       startCrossFade(liveU1, liveU2, (unsigned long)fadeTimeSetting * 1000);
-      
+
       playingCue = -1;
       currentMenuState = STATE_MENU_CUE_ACTION;
       lastOledUpdate = 0;
@@ -764,7 +805,7 @@ void loop() {
     // Check Port 1 (Universe 1)
     if (enttecPro.hasDmxData(0)) {
       bool valuesChanged = false;
-      const uint8_t* newData = enttecPro.getDmxData(0);
+      const uint8_t *newData = enttecPro.getDmxData(0);
       uint16_t len = enttecPro.getDmxLength(0);
       for (int i = 0; i < len; i++) {
         if (newData[i] != currentDmxValues[0][i]) {
@@ -774,18 +815,20 @@ void loop() {
       }
 
       if (!isCrossFading) {
-        dmxOutput.setData(0, enttecPro.getDmxData(0), enttecPro.getDmxLength(0));
-        memcpy(currentDmxValues[0], enttecPro.getDmxData(0), enttecPro.getDmxLength(0));
+        dmxOutput.setData(0, enttecPro.getDmxData(0),
+                          enttecPro.getDmxLength(0));
+        memcpy(currentDmxValues[0], enttecPro.getDmxData(0),
+               enttecPro.getDmxLength(0));
       }
-      
+
       if (universeTimedOut[0]) {
         universeTimedOut[0] = false;
         // Smoothly fade back to live!
-        const uint8_t* liveU1 = enttecPro.getDmxData(0);
-        const uint8_t* liveU2 = enttecPro.getDmxData(1);
+        const uint8_t *liveU1 = enttecPro.getDmxData(0);
+        const uint8_t *liveU2 = enttecPro.getDmxData(1);
         startCrossFade(liveU1, liveU2, (unsigned long)fadeTimeSetting * 1000);
       }
-      
+
       enttecPro.clearDmxFlag(0);
       hasActivity = true;
       lastDmxTime[0] = millis();
@@ -798,7 +841,7 @@ void loop() {
     // Check Port 2 (Universe 2)
     if (enttecPro.hasDmxData(1)) {
       bool valuesChanged = false;
-      const uint8_t* newData = enttecPro.getDmxData(1);
+      const uint8_t *newData = enttecPro.getDmxData(1);
       uint16_t len = enttecPro.getDmxLength(1);
       for (int i = 0; i < len; i++) {
         if (newData[i] != currentDmxValues[1][i]) {
@@ -808,18 +851,20 @@ void loop() {
       }
 
       if (!isCrossFading) {
-        dmxOutput.setData(1, enttecPro.getDmxData(1), enttecPro.getDmxLength(1));
-        memcpy(currentDmxValues[1], enttecPro.getDmxData(1), enttecPro.getDmxLength(1));
+        dmxOutput.setData(1, enttecPro.getDmxData(1),
+                          enttecPro.getDmxLength(1));
+        memcpy(currentDmxValues[1], enttecPro.getDmxData(1),
+               enttecPro.getDmxLength(1));
       }
-      
+
       if (universeTimedOut[1]) {
         universeTimedOut[1] = false;
         // Smoothly fade back to live!
-        const uint8_t* liveU1 = enttecPro.getDmxData(0);
-        const uint8_t* liveU2 = enttecPro.getDmxData(1);
+        const uint8_t *liveU1 = enttecPro.getDmxData(0);
+        const uint8_t *liveU2 = enttecPro.getDmxData(1);
         startCrossFade(liveU1, liveU2, (unsigned long)fadeTimeSetting * 1000);
       }
-      
+
       enttecPro.clearDmxFlag(1);
       hasActivity = true;
       lastDmxTime[1] = millis();
@@ -840,12 +885,15 @@ void loop() {
           universeTimedOut[port] = true;
           if (disconnectModeSetting == MODE_BLACKOUT) {
             uint8_t zeroData[512] = {0};
-            startCrossFade(zeroData, zeroData, (unsigned long)fadeTimeSetting * 1000);
-          } else if (disconnectModeSetting >= 2 && disconnectModeSetting <= 11) {
+            startCrossFade(zeroData, zeroData,
+                           (unsigned long)fadeTimeSetting * 1000);
+          } else if (disconnectModeSetting >= 2 &&
+                     disconnectModeSetting <= 11) {
             int cueIdx = disconnectModeSetting - 2;
             const uint8_t *flash_cues_ptr = (const uint8_t *)FLASH_CUES_ADDR;
             const uint8_t *cue_ptr = flash_cues_ptr + (cueIdx * CUE_SIZE);
-            startCrossFade(cue_ptr, cue_ptr + 512, (unsigned long)fadeTimeSetting * 1000);
+            startCrossFade(cue_ptr, cue_ptr + 512,
+                           (unsigned long)fadeTimeSetting * 1000);
           }
         }
       }
@@ -921,7 +969,7 @@ void loop() {
       }
 
       // DMX Rate Status
-      display.print("DMX Rate: ");
+      display.print("Rate: ");
       if (dmxFpsSetting == 0) {
         display.print("Max");
       } else {
@@ -944,11 +992,21 @@ void loop() {
       display.println("=====================");
       display.println("      MAIN MENU      ");
       display.println("=====================");
-      display.println();
 
-      for (int i = 0; i < ITEM_COUNT; i++) {
-        drawMenuItem(menuItemNames[i], mainMenuCursor == i, 14 + (i * 10));
+      // Scrollable viewport of 3 items (since we have 6 items)
+      int startIdx = mainMenuCursor - 1;
+      if (startIdx < 0)
+        startIdx = 0;
+      if (startIdx > ITEM_COUNT - 3)
+        startIdx = ITEM_COUNT - 3;
+
+      for (int i = 0; i < 3; i++) {
+        int idx = startIdx + i;
+        bool selected = (mainMenuCursor == idx);
+        int y = 26 + (i * 12);
+        drawMenuItem(menuItemNames[idx], selected, y);
       }
+      drawScrollBar(mainMenuCursor, ITEM_COUNT, 3, 26, 60);
 
     } else if (currentMenuState == STATE_SET_REFRESH_RATE) {
       display.setCursor(0, 0);
@@ -1020,41 +1078,44 @@ void loop() {
       display.println("=====================");
       display.println("     SELECT CUE      ");
       display.println("=====================");
-      display.println();
 
-      // Scrollable viewport of 3 items (since we have 10 CUEs + Back = 11 items total)
+      // Scrollable viewport of 3 items (since we have 10 CUEs + Back = 11 items
+      // total)
       int startIdx = cueMenuCursor - 1;
-      if (startIdx < 0) startIdx = 0;
-      if (startIdx > (NUM_CUES + 1) - 3) startIdx = (NUM_CUES + 1) - 3;
+      if (startIdx < 0)
+        startIdx = 0;
+      if (startIdx > (NUM_CUES + 1) - 3)
+        startIdx = (NUM_CUES + 1) - 3;
 
       for (int i = 0; i < 3; i++) {
         int idx = startIdx + i;
         bool selected = (cueMenuCursor == idx);
-        int y = 20 + (i * 12);
-        
+        int y = 26 + (i * 12);
+
         if (idx == NUM_CUES) {
           drawMenuItem("Back", selected, y);
         } else {
           char label[20];
-          snprintf(label, sizeof(label), "CUE %d [%s]", idx + 1, cueRecorded[idx] ? "Saved" : "Empty");
+          snprintf(label, sizeof(label), "CUE %d [%s]", idx + 1,
+                   cueRecorded[idx] ? "Saved" : "Empty");
           drawMenuItem(label, selected, y);
         }
       }
+      drawScrollBar(cueMenuCursor, NUM_CUES + 1, 3, 26, 60);
 
     } else if (currentMenuState == STATE_MENU_CUE_ACTION) {
       display.setCursor(0, 0);
-      display.print("=====================");
+      display.println("=====================");
       display.print("     CUE ");
       display.print(selectedCue + 1);
-      display.println(" MENU     ");
+      display.println(" MENU");
       display.println("=====================");
-      display.println();
 
       // Actions: Play, Record, Delete, Back
-      drawMenuItem("Play", cueActionCursor == 0, 20);
-      drawMenuItem("Record", cueActionCursor == 1, 31);
-      drawMenuItem("Delete", cueActionCursor == 2, 42);
-      drawMenuItem("Back", cueActionCursor == 3, 53);
+      drawMenuItem("Play", cueActionCursor == 0, 24);
+      drawMenuItem("Record", cueActionCursor == 1, 34);
+      drawMenuItem("Delete", cueActionCursor == 2, 44);
+      drawMenuItem("Back", cueActionCursor == 3, 54);
 
     } else if (currentMenuState == STATE_PLAYING_CUE) {
       display.setCursor(0, 0);
