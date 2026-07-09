@@ -273,7 +273,7 @@ void EnttecPro::handleGetSerial() {
 
 void EnttecPro::handleGetManufacturer() {
     // Reply format: ESTA_ID_LSB, ESTA_ID_MSB, then manufacturer string
-    const char* name = "PicoDMX";
+    const char* name = "KM Light";
     uint16_t nameLen = strlen(name);
     uint16_t totalLen = 2 + nameLen;
 
@@ -291,7 +291,7 @@ void EnttecPro::handleGetManufacturer() {
 
 void EnttecPro::handleGetDeviceName() {
     // Reply format: DEV_ID_LSB, DEV_ID_MSB, then device name string
-    const char* name = "Pico DMX Interface";
+    const char* name = "KM Light DMX Pro";
     uint16_t nameLen = strlen(name);
     uint16_t totalLen = 2 + nameLen;
 
