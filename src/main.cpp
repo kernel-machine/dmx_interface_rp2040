@@ -1138,12 +1138,12 @@ void loop() {
     } else if (currentMenuState == STATE_SET_REFRESH_RATE) {
       display.setCursor(0, 0);
       display.println("=====================");
-      display.println("  DMX REFRESH RATE   ");
+      display.println("  DMX REFRESH RATE");
       display.println("=====================");
       display.println();
 
       display.setTextSize(2);
-      display.setCursor(20, 26);
+      display.setCursor(20, 32);
       if (tempFpsSetting == 0) {
         display.println("  MAX");
       } else {
@@ -1155,12 +1155,12 @@ void loop() {
     } else if (currentMenuState == STATE_SET_DISCONNECT_MODE) {
       display.setCursor(0, 0);
       display.println("=====================");
-      display.println("    ON DISCONNECT    ");
+      display.println("    ON DISCONNECT");
       display.println("=====================");
       display.println();
 
       display.setTextSize(2);
-      display.setCursor(10, 26);
+      display.setCursor(10, 32);
       if (tempDisconnectMode == MODE_BLACKOUT) {
         display.println("BLACKOUT");
       } else if (tempDisconnectMode == MODE_HOLD_LAST) {
@@ -1249,12 +1249,12 @@ void loop() {
     } else if (currentMenuState == STATE_SET_SCREENSAVER_TIMEOUT) {
       display.setCursor(0, 0);
       display.println("=====================");
-      display.println("  SCREENSAVER TIME   ");
+      display.println("  SCREENSAVER TIME");
       display.println("=====================");
       display.println();
 
       display.setTextSize(2);
-      display.setCursor(10, 26);
+      display.setCursor(10, 32);
       if (tempScreensaverTimeout == 0) {
         display.println("DISABLED");
       } else {
@@ -1266,12 +1266,12 @@ void loop() {
     } else if (currentMenuState == STATE_SET_FADE_TIME) {
       display.setCursor(0, 0);
       display.println("=====================");
-      display.println("   CUE FADE TIME     ");
+      display.println("   CUE FADE TIME");
       display.println("=====================");
       display.println();
 
       display.setTextSize(2);
-      display.setCursor(20, 26);
+      display.setCursor(20, 32);
       display.print("  ");
       display.print(tempFadeTime);
       display.println(" Sec");
@@ -1340,17 +1340,18 @@ void loop() {
     } else if (currentMenuState == STATE_CUE_FEEDBACK) {
       display.setCursor(0, 0);
       display.println("=====================");
-      display.print("      CUE ");
+      display.print("     CUE ");
       display.print(selectedCue + 1);
-      display.println(" INFO      ");
+      display.println(" INFO");
       display.println("=====================");
       display.println();
 
       display.setTextSize(2);
-      display.setCursor(10, 26);
       if (activeFeedback == FEEDBACK_RECORDED) {
+        display.setCursor(10, 32);
         display.println("RECORDED!");
       } else {
+        display.setCursor(16, 32);
         display.println("DELETED!");
       }
     }
