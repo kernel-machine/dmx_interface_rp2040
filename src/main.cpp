@@ -69,6 +69,7 @@ enum MenuState {
   STATE_MENU_MAIN,
   STATE_SET_REFRESH_RATE,
   STATE_SET_DISCONNECT_MODE,
+  STATE_SET_ROUTING,
   STATE_SET_SCREENSAVER_TIMEOUT,
   STATE_SET_FADE_TIME,
   STATE_MENU_CUES,       // Select CUE index (1 to 10)
@@ -87,6 +88,7 @@ enum DisconnectMode { MODE_BLACKOUT = 0, MODE_HOLD_LAST = 1 };
 enum MenuItem {
   ITEM_REFRESH_RATE,
   ITEM_DISCONNECT_MODE,
+  ITEM_ROUTING,
   ITEM_SCREENSAVER_TIMEOUT,
   ITEM_FADE_TIME,
   ITEM_CUES,
@@ -95,8 +97,8 @@ enum MenuItem {
 };
 
 static const char *menuItemNames[ITEM_COUNT] = {
-    "DMX Refresh Rate", "On Disconnect", "Screensaver Time",
-    "Fade Time",        "CUEs",          "Exit"};
+    "DMX Refresh Rate", "On Disconnect",    "DMX Routing",
+    "Screensaver Time", "Fade Time",        "CUEs",             "Exit"};
 
 // CUE Storage Constants
 #define CUE_SIZE 1024 // 512 bytes Universe 1 + 512 bytes Universe 2
@@ -146,12 +148,28 @@ static unsigned long crossFadeDuration = 0;
 static uint8_t crossFadeStartBuffer[2][512] = {{0}, {0}};
 static uint8_t crossFadeTargetBuffer[2][512] = {{0}, {0}};
 
+#define ROUTE_NONE   0
+#define ROUTE_OUT_A  1
+#define ROUTE_OUT_B  2
+#define ROUTE_BOTH   3
+
+enum RoutingMode {
+  ROUTE_MODE_1 = 0, // 1->A, 2->B
+  ROUTE_MODE_2 = 1, // 1->B, 2->A
+  ROUTE_MODE_3 = 2, // 1->A, 1->B
+  ROUTE_MODE_4 = 3  // 2->A, 2->B
+};
+
+static uint8_t routingModeSetting = ROUTE_MODE_1;
+static uint8_t tempRoutingMode = ROUTE_MODE_1;
+
 #define EEPROM_MAGIC 0x5A
 #define EEPROM_MAGIC_ADDR 0
 #define EEPROM_FPS_ADDR 1
 #define EEPROM_DISCONNECT_MODE_ADDR 2
 #define EEPROM_SCREENSAVER_TIMEOUT_ADDR 3
 #define EEPROM_FADE_TIME_ADDR 4
+#define EEPROM_ROUTING_MODE_ADDR 5
 
 // EEPROM settings management
 void loadSettings() {
@@ -171,6 +189,10 @@ void loadSettings() {
     if (fadeTimeSetting > 10) {
       fadeTimeSetting = 3; // Default if invalid (3 seconds)
     }
+    routingModeSetting = EEPROM.read(EEPROM_ROUTING_MODE_ADDR);
+    if (routingModeSetting > 3) {
+      routingModeSetting = ROUTE_MODE_1;
+    }
     for (int i = 0; i < NUM_CUES; i++) {
       cueRecorded[i] = (EEPROM.read(EEPROM_CUE_RECORDED_START_ADDR + i) == 1);
     }
@@ -188,11 +210,13 @@ void loadSettings() {
     disconnectModeSetting = MODE_BLACKOUT;
     screensaverTimeoutSetting = 60;
     fadeTimeSetting = 3;
+    routingModeSetting = ROUTE_MODE_1;
     EEPROM.write(EEPROM_MAGIC_ADDR, EEPROM_MAGIC);
     EEPROM.write(EEPROM_FPS_ADDR, dmxFpsSetting);
     EEPROM.write(EEPROM_DISCONNECT_MODE_ADDR, disconnectModeSetting);
     EEPROM.write(EEPROM_SCREENSAVER_TIMEOUT_ADDR, screensaverTimeoutSetting);
     EEPROM.write(EEPROM_FADE_TIME_ADDR, fadeTimeSetting);
+    EEPROM.write(EEPROM_ROUTING_MODE_ADDR, routingModeSetting);
     for (int i = 0; i < NUM_CUES; i++) {
       cueRecorded[i] = false;
       EEPROM.write(EEPROM_CUE_RECORDED_START_ADDR + i, 0);
@@ -207,14 +231,42 @@ void saveSettings() {
   EEPROM.write(EEPROM_DISCONNECT_MODE_ADDR, disconnectModeSetting);
   EEPROM.write(EEPROM_SCREENSAVER_TIMEOUT_ADDR, screensaverTimeoutSetting);
   EEPROM.write(EEPROM_FADE_TIME_ADDR, fadeTimeSetting);
+  EEPROM.write(EEPROM_ROUTING_MODE_ADDR, routingModeSetting);
   for (int i = 0; i < NUM_CUES; i++) {
     EEPROM.write(EEPROM_CUE_RECORDED_START_ADDR + i, cueRecorded[i] ? 1 : 0);
   }
   EEPROM.commit();
 }
 
-void recordCue(int cueIdx) {
+uint8_t getMappedInputForOutput(uint8_t outPort) {
+  if (outPort == 0) { // Output A
+    return (routingModeSetting == ROUTE_MODE_1 || routingModeSetting == ROUTE_MODE_3) ? 0 : 1;
+  } else { // Output B
+    return (routingModeSetting == ROUTE_MODE_2 || routingModeSetting == ROUTE_MODE_3) ? 0 : 1;
+  }
+}
+
+const uint8_t* getLiveDmxDataForOutput(uint8_t outPort) {
   extern EnttecPro enttecPro;
+  uint8_t inPort = getMappedInputForOutput(outPort);
+  return enttecPro.getDmxData(inPort);
+}
+
+const uint8_t* getTimeoutDataForOutput(uint8_t outPort) {
+  if (disconnectModeSetting == MODE_BLACKOUT) {
+    static const uint8_t zeroData[512] = {0};
+    return zeroData;
+  } else if (disconnectModeSetting == MODE_HOLD_LAST) {
+    return nullptr;
+  } else if (disconnectModeSetting >= 2 && disconnectModeSetting <= 11) {
+    int cueIdx = disconnectModeSetting - 2;
+    const uint8_t *flash_cues_ptr = (const uint8_t *)FLASH_CUES_ADDR;
+    return flash_cues_ptr + (cueIdx * CUE_SIZE) + (outPort * 512);
+  }
+  return nullptr;
+}
+
+void recordCue(int cueIdx) {
   if (cueIdx < 0 || cueIdx >= NUM_CUES)
     return;
 
@@ -227,10 +279,10 @@ void recordCue(int cueIdx) {
   const uint8_t *flash_cues_ptr = (const uint8_t *)FLASH_CUES_ADDR;
   memcpy(tempBuffer, flash_cues_ptr, NUM_CUES * CUE_SIZE);
 
-  // Update the target CUE space with current live DMX values from enttecPro
+  // Update the target CUE space with current live DMX values
   uint8_t *targetCue = tempBuffer + (cueIdx * CUE_SIZE);
-  memcpy(targetCue, enttecPro.getDmxData(0), 512);
-  memcpy(targetCue + 512, enttecPro.getDmxData(1), 512);
+  memcpy(targetCue, currentDmxValues[0], 512);
+  memcpy(targetCue + 512, currentDmxValues[1], 512);
 
   // Disable interrupts and reprogram flash
   uint32_t ints = save_and_disable_interrupts();
@@ -295,6 +347,8 @@ void setup() {
   }
 
   if (hasDisplay) {
+    display.ssd1306_command(SSD1306_SETCONTRAST);
+    display.ssd1306_command(0xFF); // Set contrast to maximum brightness (255)
     display.clearDisplay();
 
     // Draw Bun
@@ -510,6 +564,8 @@ void loop() {
     if (screenSaverActive) {
       screenSaverActive = false;
       display.ssd1306_command(SSD1306_DISPLAYON);
+      display.ssd1306_command(SSD1306_SETCONTRAST);
+      display.ssd1306_command(0xFF); // Ensure maximum brightness on wake
       // Force redraw immediately
       lastOledUpdate = 0;
       // Consume the presses to prevent triggering actions on wake up
@@ -555,6 +611,9 @@ void loop() {
       } else if (mainMenuCursor == ITEM_DISCONNECT_MODE) {
         currentMenuState = STATE_SET_DISCONNECT_MODE;
         tempDisconnectMode = disconnectModeSetting;
+      } else if (mainMenuCursor == ITEM_ROUTING) {
+        currentMenuState = STATE_SET_ROUTING;
+        tempRoutingMode = routingModeSetting;
       } else if (mainMenuCursor == ITEM_SCREENSAVER_TIMEOUT) {
         currentMenuState = STATE_SET_SCREENSAVER_TIMEOUT;
         tempScreensaverTimeout = screensaverTimeoutSetting;
@@ -645,6 +704,22 @@ void loop() {
           }
         }
       }
+      currentMenuState = STATE_MENU_MAIN;
+      lastOledUpdate = 0;
+    }
+  } else if (currentMenuState == STATE_SET_ROUTING) {
+    if (k1Pressed) { // Cancel
+      currentMenuState = STATE_MENU_MAIN;
+      lastOledUpdate = 0;
+    } else if (k2Pressed) { // Next Option
+      tempRoutingMode = (tempRoutingMode + 1) % 4;
+      lastOledUpdate = 0;
+    } else if (k3Pressed) { // Prev Option
+      tempRoutingMode = (tempRoutingMode - 1 + 4) % 4;
+      lastOledUpdate = 0;
+    } else if (k4Pressed) { // Save
+      routingModeSetting = tempRoutingMode;
+      saveSettings();
       currentMenuState = STATE_MENU_MAIN;
       lastOledUpdate = 0;
     }
@@ -756,9 +831,7 @@ void loop() {
   } else if (currentMenuState == STATE_PLAYING_CUE) {
     if (k1Pressed || k4Pressed) { // Stop
       // Start crossfade out of the CUE back to live USB DMX
-      const uint8_t *liveU1 = enttecPro.getDmxData(0);
-      const uint8_t *liveU2 = enttecPro.getDmxData(1);
-      startCrossFade(liveU1, liveU2, (unsigned long)fadeTimeSetting * 1000);
+      startCrossFade(getLiveDmxDataForOutput(0), getLiveDmxDataForOutput(1), (unsigned long)fadeTimeSetting * 1000);
 
       playingCue = -1;
       currentMenuState = STATE_MENU_CUE_ACTION;
@@ -807,26 +880,47 @@ void loop() {
       bool valuesChanged = false;
       const uint8_t *newData = enttecPro.getDmxData(0);
       uint16_t len = enttecPro.getDmxLength(0);
-      for (int i = 0; i < len; i++) {
-        if (newData[i] != currentDmxValues[0][i]) {
-          valuesChanged = true;
-          break;
+
+      // Check if values changed compared to any output it is routed to
+      bool routesToA = (getMappedInputForOutput(0) == 0);
+      bool routesToB = (getMappedInputForOutput(1) == 0);
+
+      if (routesToA) {
+        for (int i = 0; i < len; i++) {
+          if (newData[i] != currentDmxValues[0][i]) {
+            valuesChanged = true;
+            break;
+          }
+        }
+      }
+      if (!valuesChanged && routesToB) {
+        for (int i = 0; i < len; i++) {
+          if (newData[i] != currentDmxValues[1][i]) {
+            valuesChanged = true;
+            break;
+          }
         }
       }
 
       if (!isCrossFading) {
-        dmxOutput.setData(0, enttecPro.getDmxData(0),
-                          enttecPro.getDmxLength(0));
-        memcpy(currentDmxValues[0], enttecPro.getDmxData(0),
-               enttecPro.getDmxLength(0));
+        if (routesToA) {
+          dmxOutput.setData(0, newData, len);
+          memcpy(currentDmxValues[0], newData, len);
+        }
+        if (routesToB) {
+          dmxOutput.setData(1, newData, len);
+          memcpy(currentDmxValues[1], newData, len);
+        }
       }
 
       if (universeTimedOut[0]) {
         universeTimedOut[0] = false;
-        // Smoothly fade back to live!
-        const uint8_t *liveU1 = enttecPro.getDmxData(0);
-        const uint8_t *liveU2 = enttecPro.getDmxData(1);
-        startCrossFade(liveU1, liveU2, (unsigned long)fadeTimeSetting * 1000);
+        // Smoothly fade back to live! We only fade the outputs routed from Input 1.
+        const uint8_t* targetA = routesToA ? getLiveDmxDataForOutput(0) : nullptr;
+        const uint8_t* targetB = routesToB ? getLiveDmxDataForOutput(1) : nullptr;
+        if (targetA || targetB) {
+          startCrossFade(targetA, targetB, (unsigned long)fadeTimeSetting * 1000);
+        }
       }
 
       enttecPro.clearDmxFlag(0);
@@ -843,26 +937,47 @@ void loop() {
       bool valuesChanged = false;
       const uint8_t *newData = enttecPro.getDmxData(1);
       uint16_t len = enttecPro.getDmxLength(1);
-      for (int i = 0; i < len; i++) {
-        if (newData[i] != currentDmxValues[1][i]) {
-          valuesChanged = true;
-          break;
+
+      // Check if values changed compared to any output it is routed to
+      bool routesToA = (getMappedInputForOutput(0) == 1);
+      bool routesToB = (getMappedInputForOutput(1) == 1);
+
+      if (routesToA) {
+        for (int i = 0; i < len; i++) {
+          if (newData[i] != currentDmxValues[0][i]) {
+            valuesChanged = true;
+            break;
+          }
+        }
+      }
+      if (!valuesChanged && routesToB) {
+        for (int i = 0; i < len; i++) {
+          if (newData[i] != currentDmxValues[1][i]) {
+            valuesChanged = true;
+            break;
+          }
         }
       }
 
       if (!isCrossFading) {
-        dmxOutput.setData(1, enttecPro.getDmxData(1),
-                          enttecPro.getDmxLength(1));
-        memcpy(currentDmxValues[1], enttecPro.getDmxData(1),
-               enttecPro.getDmxLength(1));
+        if (routesToA) {
+          dmxOutput.setData(0, newData, len);
+          memcpy(currentDmxValues[0], newData, len);
+        }
+        if (routesToB) {
+          dmxOutput.setData(1, newData, len);
+          memcpy(currentDmxValues[1], newData, len);
+        }
       }
 
       if (universeTimedOut[1]) {
         universeTimedOut[1] = false;
-        // Smoothly fade back to live!
-        const uint8_t *liveU1 = enttecPro.getDmxData(0);
-        const uint8_t *liveU2 = enttecPro.getDmxData(1);
-        startCrossFade(liveU1, liveU2, (unsigned long)fadeTimeSetting * 1000);
+        // Smoothly fade back to live! We only fade the outputs routed from Input 2.
+        const uint8_t* targetA = routesToA ? getLiveDmxDataForOutput(0) : nullptr;
+        const uint8_t* targetB = routesToB ? getLiveDmxDataForOutput(1) : nullptr;
+        if (targetA || targetB) {
+          startCrossFade(targetA, targetB, (unsigned long)fadeTimeSetting * 1000);
+        }
       }
 
       enttecPro.clearDmxFlag(1);
@@ -879,21 +994,19 @@ void loop() {
     }
 
     // Check for serial signal timeout / disconnection
-    for (int port = 0; port < 2; port++) {
-      if (lastDmxTime[port] > 0 && !universeTimedOut[port]) {
-        if (millis() - lastDmxTime[port] > 2000) { // 2-second timeout
-          universeTimedOut[port] = true;
-          if (disconnectModeSetting == MODE_BLACKOUT) {
-            uint8_t zeroData[512] = {0};
-            startCrossFade(zeroData, zeroData,
-                           (unsigned long)fadeTimeSetting * 1000);
-          } else if (disconnectModeSetting >= 2 &&
-                     disconnectModeSetting <= 11) {
-            int cueIdx = disconnectModeSetting - 2;
-            const uint8_t *flash_cues_ptr = (const uint8_t *)FLASH_CUES_ADDR;
-            const uint8_t *cue_ptr = flash_cues_ptr + (cueIdx * CUE_SIZE);
-            startCrossFade(cue_ptr, cue_ptr + 512,
-                           (unsigned long)fadeTimeSetting * 1000);
+    for (int inPort = 0; inPort < 2; inPort++) {
+      if (lastDmxTime[inPort] > 0 && !universeTimedOut[inPort]) {
+        if (millis() - lastDmxTime[inPort] > 2000) { // 2-second timeout
+          universeTimedOut[inPort] = true;
+
+          // Determine which outputs are affected by this input timing out
+          bool routesToA = (getMappedInputForOutput(0) == inPort);
+          bool routesToB = (getMappedInputForOutput(1) == inPort);
+          const uint8_t* targetA = routesToA ? getTimeoutDataForOutput(0) : nullptr;
+          const uint8_t* targetB = routesToB ? getTimeoutDataForOutput(1) : nullptr;
+
+          if (targetA || targetB) {
+            startCrossFade(targetA, targetB, (unsigned long)fadeTimeSetting * 1000);
           }
         }
       }
@@ -939,21 +1052,22 @@ void loop() {
       display.println("    KM LIGHT DMX");
       display.println("---------------------");
 
-      // Universe 1 Status
-      display.print("U1 (GP0): ");
+      // Input 1 & 2 status
+      display.print("In 1: ");
       if (lastDmxTime[0] > 0 && (millis() - lastDmxTime[0] < 1000)) {
-        display.println("Active");
+        display.print("Active");
       } else {
-        display.println("Idle");
+        display.print("Idle");
       }
+      display.println();
 
-      // Universe 2 Status
-      display.print("U2 (GP4): ");
+      display.print("In 2: ");
       if (lastDmxTime[1] > 0 && (millis() - lastDmxTime[1] < 1000)) {
-        display.println("Active");
+        display.print("Active");
       } else {
-        display.println("Idle");
+        display.print("Idle");
       }
+      display.println();
 
       // Draw Virtual LEDs (flash solid when values are actively changing)
       if (millis() < u1LedOnUntil) {
@@ -967,6 +1081,19 @@ void loop() {
       } else {
         display.drawCircle(115, 27, 3, SSD1306_WHITE);
       }
+
+      // DMX Routing configuration summary
+      display.print("Route: ");
+      if (routingModeSetting == ROUTE_MODE_1) {
+        display.print("1->A, 2->B");
+      } else if (routingModeSetting == ROUTE_MODE_2) {
+        display.print("1->B, 2->A");
+      } else if (routingModeSetting == ROUTE_MODE_3) {
+        display.print("1->A, 1->B");
+      } else if (routingModeSetting == ROUTE_MODE_4) {
+        display.print("2->A, 2->B");
+      }
+      display.println();
 
       // DMX Rate Status
       display.print("Rate: ");
@@ -993,7 +1120,7 @@ void loop() {
       display.println("      MAIN MENU      ");
       display.println("=====================");
 
-      // Scrollable viewport of 3 items (since we have 6 items)
+      // Scrollable viewport of 3 items
       int startIdx = mainMenuCursor - 1;
       if (startIdx < 0)
         startIdx = 0;
@@ -1041,6 +1168,82 @@ void loop() {
       } else {
         display.print(" CUE ");
         display.println(tempDisconnectMode - 1);
+      }
+
+    } else if (currentMenuState == STATE_SET_ROUTING) {
+      display.setCursor(0, 0);
+      display.println("     DMX ROUTING");
+      display.drawFastHLine(0, 10, 128, SSD1306_WHITE);
+
+      // Print config name on the left side
+      display.setTextSize(1);
+      display.setCursor(0, 22);
+      if (tempRoutingMode == ROUTE_MODE_1) {
+        display.println("Mode:");
+        display.println("Normal");
+        display.println("1->A, 2->B");
+      } else if (tempRoutingMode == ROUTE_MODE_2) {
+        display.println("Mode:");
+        display.println("Swap");
+        display.println("1->B, 2->A");
+      } else if (tempRoutingMode == ROUTE_MODE_3) {
+        display.println("Mode:");
+        display.println("Split 1");
+        display.println("1->A, 1->B");
+      } else if (tempRoutingMode == ROUTE_MODE_4) {
+        display.println("Mode:");
+        display.println("Split 2");
+        display.println("2->A, 2->B");
+      }
+
+      // Draw input/output text labels
+      display.setCursor(75, 22);
+      display.print("1");
+      display.setCursor(75, 46);
+      display.print("2");
+      
+      display.setCursor(115, 22);
+      display.print("A");
+      display.setCursor(115, 46);
+      display.print("B");
+
+      // Draw arrows based on selected configuration
+      if (tempRoutingMode == ROUTE_MODE_1) {
+        // 1 -> A
+        display.drawLine(85, 25, 105, 25, SSD1306_WHITE);
+        display.drawLine(105, 25, 101, 22, SSD1306_WHITE);
+        display.drawLine(105, 25, 101, 28, SSD1306_WHITE);
+        // 2 -> B
+        display.drawLine(85, 49, 105, 49, SSD1306_WHITE);
+        display.drawLine(105, 49, 101, 46, SSD1306_WHITE);
+        display.drawLine(105, 49, 101, 52, SSD1306_WHITE);
+      } else if (tempRoutingMode == ROUTE_MODE_2) {
+        // 1 -> B
+        display.drawLine(85, 25, 105, 49, SSD1306_WHITE);
+        display.drawLine(105, 49, 99, 47, SSD1306_WHITE);
+        display.drawLine(105, 49, 103, 42, SSD1306_WHITE);
+        // 2 -> A
+        display.drawLine(85, 49, 105, 25, SSD1306_WHITE);
+        display.drawLine(105, 25, 99, 27, SSD1306_WHITE);
+        display.drawLine(105, 25, 103, 32, SSD1306_WHITE);
+      } else if (tempRoutingMode == ROUTE_MODE_3) {
+        // 1 -> A
+        display.drawLine(85, 25, 105, 25, SSD1306_WHITE);
+        display.drawLine(105, 25, 101, 22, SSD1306_WHITE);
+        display.drawLine(105, 25, 101, 28, SSD1306_WHITE);
+        // 1 -> B
+        display.drawLine(85, 25, 105, 49, SSD1306_WHITE);
+        display.drawLine(105, 49, 99, 47, SSD1306_WHITE);
+        display.drawLine(105, 49, 103, 42, SSD1306_WHITE);
+      } else if (tempRoutingMode == ROUTE_MODE_4) {
+        // 2 -> A
+        display.drawLine(85, 49, 105, 25, SSD1306_WHITE);
+        display.drawLine(105, 25, 99, 27, SSD1306_WHITE);
+        display.drawLine(105, 25, 103, 32, SSD1306_WHITE);
+        // 2 -> B
+        display.drawLine(85, 49, 105, 49, SSD1306_WHITE);
+        display.drawLine(105, 49, 101, 46, SSD1306_WHITE);
+        display.drawLine(105, 49, 101, 52, SSD1306_WHITE);
       }
 
     } else if (currentMenuState == STATE_SET_SCREENSAVER_TIMEOUT) {
