@@ -97,8 +97,8 @@ enum MenuItem {
 };
 
 static const char *menuItemNames[ITEM_COUNT] = {
-    "DMX Refresh Rate", "On Disconnect",    "DMX Routing",
-    "Screensaver Time", "Fade Time",        "CUEs",             "Exit"};
+    "DMX Refresh Rate", "On Disconnect", "DMX Routing", "Screensaver Time",
+    "Fade Time",        "CUEs",          "Exit"};
 
 // CUE Storage Constants
 #define CUE_SIZE 1024 // 512 bytes Universe 1 + 512 bytes Universe 2
@@ -148,10 +148,10 @@ static unsigned long crossFadeDuration = 0;
 static uint8_t crossFadeStartBuffer[2][512] = {{0}, {0}};
 static uint8_t crossFadeTargetBuffer[2][512] = {{0}, {0}};
 
-#define ROUTE_NONE   0
-#define ROUTE_OUT_A  1
-#define ROUTE_OUT_B  2
-#define ROUTE_BOTH   3
+#define ROUTE_NONE 0
+#define ROUTE_OUT_A 1
+#define ROUTE_OUT_B 2
+#define ROUTE_BOTH 3
 
 enum RoutingMode {
   ROUTE_MODE_1 = 0, // 1->A, 2->B
@@ -240,19 +240,33 @@ void saveSettings() {
 
 uint8_t getMappedInputForOutput(uint8_t outPort) {
   if (outPort == 0) { // Output A
-    return (routingModeSetting == ROUTE_MODE_1 || routingModeSetting == ROUTE_MODE_3) ? 0 : 1;
+    return (routingModeSetting == ROUTE_MODE_1 ||
+            routingModeSetting == ROUTE_MODE_3)
+               ? 0
+               : 1;
   } else { // Output B
-    return (routingModeSetting == ROUTE_MODE_2 || routingModeSetting == ROUTE_MODE_3) ? 0 : 1;
+    return (routingModeSetting == ROUTE_MODE_2 ||
+            routingModeSetting == ROUTE_MODE_3)
+               ? 0
+               : 1;
   }
 }
 
-const uint8_t* getLiveDmxDataForOutput(uint8_t outPort) {
+// Returns true if the specified input (1 or 2) has at least one assigned output port
+bool hasRoute(uint8_t input) {
+  uint8_t inPort = (input == 2) ? 1 : 0;
+  return (getMappedInputForOutput(0) == inPort ||
+          getMappedInputForOutput(1) == inPort);
+}
+
+const uint8_t *getLiveDmxDataForOutput(uint8_t outPort) {
   extern EnttecPro enttecPro;
   uint8_t inPort = getMappedInputForOutput(outPort);
   return enttecPro.getDmxData(inPort);
 }
 
-const uint8_t* getTimeoutDataForOutput(uint8_t outPort) {
+
+const uint8_t *getTimeoutDataForOutput(uint8_t outPort) {
   if (disconnectModeSetting == MODE_BLACKOUT) {
     static const uint8_t zeroData[512] = {0};
     return zeroData;
@@ -558,21 +572,27 @@ void loop() {
     }
   }
 
-  // Intercept button presses to manage screensaver and exit hold last mode if timed out
+  // Intercept button presses to manage screensaver and exit hold last mode if
+  // timed out
   if (k1Pressed || k2Pressed || k3Pressed || k4Pressed) {
     lastUserInteractionTime = millis();
 
     // Exit hold last mode on manual button press
     for (int port = 0; port < 2; port++) {
-      if (universeTimedOut[port] && (disconnectModeSetting == MODE_HOLD_LAST || (disconnectModeSetting >= 2 && disconnectModeSetting <= 11))) {
+      if (universeTimedOut[port] &&
+          (disconnectModeSetting == MODE_HOLD_LAST ||
+           (disconnectModeSetting >= 2 && disconnectModeSetting <= 11))) {
         universeTimedOut[port] = false;
         lastDmxTime[port] = millis(); // Prevent immediate re-timeout
         bool routesToA = (getMappedInputForOutput(0) == port);
         bool routesToB = (getMappedInputForOutput(1) == port);
-        const uint8_t* targetA = routesToA ? getLiveDmxDataForOutput(0) : nullptr;
-        const uint8_t* targetB = routesToB ? getLiveDmxDataForOutput(1) : nullptr;
+        const uint8_t *targetA =
+            routesToA ? getLiveDmxDataForOutput(0) : nullptr;
+        const uint8_t *targetB =
+            routesToB ? getLiveDmxDataForOutput(1) : nullptr;
         if (targetA || targetB) {
-          startCrossFade(targetA, targetB, (unsigned long)fadeTimeSetting * 1000);
+          startCrossFade(targetA, targetB,
+                         (unsigned long)fadeTimeSetting * 1000);
         }
       }
     }
@@ -736,6 +756,12 @@ void loop() {
     } else if (k4Pressed) { // Save
       routingModeSetting = tempRoutingMode;
       saveSettings();
+      // Clear timeout for inputs that are no longer routed
+      for (int port = 0; port < 2; port++) {
+        if (!hasRoute(port + 1)) {
+          universeTimedOut[port] = false;
+        }
+      }
       currentMenuState = STATE_MENU_MAIN;
       lastOledUpdate = 0;
     }
@@ -847,7 +873,8 @@ void loop() {
   } else if (currentMenuState == STATE_PLAYING_CUE) {
     if (k1Pressed || k4Pressed) { // Stop
       // Start crossfade out of the CUE back to live USB DMX
-      startCrossFade(getLiveDmxDataForOutput(0), getLiveDmxDataForOutput(1), (unsigned long)fadeTimeSetting * 1000);
+      startCrossFade(getLiveDmxDataForOutput(0), getLiveDmxDataForOutput(1),
+                     (unsigned long)fadeTimeSetting * 1000);
 
       playingCue = -1;
       currentMenuState = STATE_MENU_CUE_ACTION;
@@ -897,7 +924,9 @@ void loop() {
       uint16_t len = enttecPro.getDmxLength(0);
 
       bool skipDueToHoldLast = false;
-      if (universeTimedOut[0] && (disconnectModeSetting == MODE_HOLD_LAST || (disconnectModeSetting >= 2 && disconnectModeSetting <= 11))) {
+      if (universeTimedOut[0] &&
+          (disconnectModeSetting == MODE_HOLD_LAST ||
+           (disconnectModeSetting >= 2 && disconnectModeSetting <= 11))) {
         skipDueToHoldLast = true;
       }
 
@@ -939,11 +968,15 @@ void loop() {
 
         if (universeTimedOut[0]) {
           universeTimedOut[0] = false;
-          // Smoothly fade back to live! We only fade the outputs routed from Input 1.
-          const uint8_t* targetA = routesToA ? getLiveDmxDataForOutput(0) : nullptr;
-          const uint8_t* targetB = routesToB ? getLiveDmxDataForOutput(1) : nullptr;
+          // Smoothly fade back to live! We only fade the outputs routed from
+          // Input 1.
+          const uint8_t *targetA =
+              routesToA ? getLiveDmxDataForOutput(0) : nullptr;
+          const uint8_t *targetB =
+              routesToB ? getLiveDmxDataForOutput(1) : nullptr;
           if (targetA || targetB) {
-            startCrossFade(targetA, targetB, (unsigned long)fadeTimeSetting * 1000);
+            startCrossFade(targetA, targetB,
+                           (unsigned long)fadeTimeSetting * 1000);
           }
         }
 
@@ -963,7 +996,9 @@ void loop() {
       uint16_t len = enttecPro.getDmxLength(1);
 
       bool skipDueToHoldLast = false;
-      if (universeTimedOut[1] && (disconnectModeSetting == MODE_HOLD_LAST || (disconnectModeSetting >= 2 && disconnectModeSetting <= 11))) {
+      if (universeTimedOut[1] &&
+          (disconnectModeSetting == MODE_HOLD_LAST ||
+           (disconnectModeSetting >= 2 && disconnectModeSetting <= 11))) {
         skipDueToHoldLast = true;
       }
 
@@ -1005,11 +1040,15 @@ void loop() {
 
         if (universeTimedOut[1]) {
           universeTimedOut[1] = false;
-          // Smoothly fade back to live! We only fade the outputs routed from Input 2.
-          const uint8_t* targetA = routesToA ? getLiveDmxDataForOutput(0) : nullptr;
-          const uint8_t* targetB = routesToB ? getLiveDmxDataForOutput(1) : nullptr;
+          // Smoothly fade back to live! We only fade the outputs routed from
+          // Input 2.
+          const uint8_t *targetA =
+              routesToA ? getLiveDmxDataForOutput(0) : nullptr;
+          const uint8_t *targetB =
+              routesToB ? getLiveDmxDataForOutput(1) : nullptr;
           if (targetA || targetB) {
-            startCrossFade(targetA, targetB, (unsigned long)fadeTimeSetting * 1000);
+            startCrossFade(targetA, targetB,
+                           (unsigned long)fadeTimeSetting * 1000);
           }
         }
 
@@ -1029,18 +1068,21 @@ void loop() {
 
     // Check for serial signal timeout / disconnection
     for (int inPort = 0; inPort < 2; inPort++) {
-      if (lastDmxTime[inPort] > 0 && !universeTimedOut[inPort]) {
+      if (lastDmxTime[inPort] > 0 && !universeTimedOut[inPort] && hasRoute(inPort + 1)) {
         if (millis() - lastDmxTime[inPort] > 2000) { // 2-second timeout
           universeTimedOut[inPort] = true;
 
           // Determine which outputs are affected by this input timing out
           bool routesToA = (getMappedInputForOutput(0) == inPort);
           bool routesToB = (getMappedInputForOutput(1) == inPort);
-          const uint8_t* targetA = routesToA ? getTimeoutDataForOutput(0) : nullptr;
-          const uint8_t* targetB = routesToB ? getTimeoutDataForOutput(1) : nullptr;
+          const uint8_t *targetA =
+              routesToA ? getTimeoutDataForOutput(0) : nullptr;
+          const uint8_t *targetB =
+              routesToB ? getTimeoutDataForOutput(1) : nullptr;
 
           if (targetA || targetB) {
-            startCrossFade(targetA, targetB, (unsigned long)fadeTimeSetting * 1000);
+            startCrossFade(targetA, targetB,
+                           (unsigned long)fadeTimeSetting * 1000);
           }
         }
       }
@@ -1084,7 +1126,10 @@ void loop() {
     if (currentMenuState == STATE_NORMAL) {
       bool isEmergencyHold = false;
       for (int port = 0; port < 2; port++) {
-        if (universeTimedOut[port] && (disconnectModeSetting == MODE_HOLD_LAST || (disconnectModeSetting >= 2 && disconnectModeSetting <= 11))) {
+        if (!hasRoute(port + 1)) continue; // Ignore inputs without a route
+        if (universeTimedOut[port] &&
+            (disconnectModeSetting == MODE_HOLD_LAST ||
+             (disconnectModeSetting >= 2 && disconnectModeSetting <= 11))) {
           isEmergencyHold = true;
           break;
         }
@@ -1115,7 +1160,7 @@ void loop() {
 
         // Input 1 & 2 status
         display.print("In 1: ");
-        if (lastDmxTime[0] > 0 && (millis() - lastDmxTime[0] < 1000)) {
+        if (lastDmxTime[0] > 0 && (millis() - lastDmxTime[0] < 1000) && hasRoute(1)) {
           display.print("Active");
         } else {
           display.print("Idle");
@@ -1123,7 +1168,7 @@ void loop() {
         display.println();
 
         display.print("In 2: ");
-        if (lastDmxTime[1] > 0 && (millis() - lastDmxTime[1] < 1000)) {
+        if (lastDmxTime[1] > 0 && (millis() - lastDmxTime[1] < 1000) && hasRoute(2)) {
           display.print("Active");
         } else {
           display.print("Idle");
@@ -1262,7 +1307,7 @@ void loop() {
       display.print("1");
       display.setCursor(75, 46);
       display.print("2");
-      
+
       display.setCursor(115, 22);
       display.print("A");
       display.setCursor(115, 46);
