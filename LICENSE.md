@@ -4,7 +4,7 @@ CC BY-NC 4.0 Attribution-NonCommercial 4.0 International
 
 Copyright (c) 2026 [Luca Giovannesi / kernel-machine]
 
-Source: https://github.com/kernel-machine/dmx_interface_rpi
+Source: https://github.com/kernel-machine/dmx_interface_rp2040
 
 =======================================================================
 
