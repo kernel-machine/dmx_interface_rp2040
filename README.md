@@ -33,3 +33,29 @@ This project is built using **PlatformIO** and the Arduino framework for the Ras
 3. Hold the **BOOTSEL** button on your Pico and plug it into your computer via USB.
 4. The Pico will appear as a USB drive named `RPI-RP2`.
 5. Drag and drop the `firmware.uf2` file into the `RPI-RP2` drive. The Pico will automatically reboot and run the new firmware.
+
+## Needed hardware
+To protect the host computer from electrical faults, ground loops, or high-voltage transients on the DMX line, the circuit implements full galvanic isolation between the USB controller and the DMX transceiver. An isolated DC-DC converter (B0505S-1W) supplies a dedicated, floating 5V rail decoupled from the RP2040’s power domain. Additionally, two high-speed 6N137 optocouplers isolate the logic signals driving the MAX485 transceiver.
+
+- **RP2040** [AliExpress](https://it.aliexpress.com/item/1005006087823796.html)
+- **2 MAX485 Module** [AliExpress](https://s.click.aliexpress.com/e/_c3NT3dPz)
+- **2 XLR Female Panel Connector** [AliExpress](https://s.click.aliexpress.com/e/_c4q55Lx9)
+- **2 6n137** [AliExpress](https://s.click.aliexpress.com/e/_c2JoN82B)
+- **B0505S-1W** [AliExpress](https://s.click.aliexpress.com/e/_c4KkuvZv)
+- **PCB Board** [AliExpress](https://it.aliexpress.com/item/1005006066751179.html)
+- **4 Switches** [AliExpress](https://it.aliexpress.com/item/1005005658595026.html)
+- **SSD1206 OLED** [AliExpress](https://s.click.aliexpress.com/e/_c4LZoMDz)
+- **Some resistors**
+- **3D printer** if you want to print the case, otherwise you can adapt it to a plastic box
+
+### Wiring Diagram
+I draw this picture after the making phase of the project, so i'm not 100% shure that it is correct, but it should be
+<img width="1593" height="812" alt="image" src="https://github.com/user-attachments/assets/deca0cd0-3b5b-4d48-bdd0-aee6335eb874" />
+
+### 3D Model
+The 3D Model is composed by 3 parts and you need m3 screw to assemble it:
+- Case
+- Top panel
+- USB Panel
+The position of the USB hole must be aligned with the position of the RP2040 on the PCB.
+
