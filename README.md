@@ -47,3 +47,15 @@ To protect the host computer from electrical faults, ground loops, or high-volta
 - **SSD1206 OLED** [AliExpress](https://s.click.aliexpress.com/e/_c4LZoMDz)
 - **Some resistors**
 - **3D printer** if you want to print the case, otherwise you can adapt it to a plastic box
+
+### Wiring Diagram
+I draw this picture after the making phase of the project, so i'm not 100% shure that it is correct, but it should be
+<img width="1593" height="812" alt="image" src="https://github.com/user-attachments/assets/deca0cd0-3b5b-4d48-bdd0-aee6335eb874" />
+
+### 3D Model
+The 3D Model is composed by 3 parts and you need m3 screw to assemble it:
+- Case
+- Top panel
+- USB Panel
+The position of the USB hole must be aligned with the position of the RP2040 on the PCB.
+
