@@ -1,4 +1,8 @@
 # Pico DMX Interface — Enttec DMX USB Pro Emulator (Dual Universe)
+<img src="https://github.com/user-attachments/assets/eee21a7f-7b06-4964-9512-9229dd2f2e9b" 
+  alt="DMX Node" 
+  width="500" 
+  style="display: block; margin: 0 auto" />
 
 ## Motivation
 Lighting control hardware can often be expensive or difficult to customize. The motivation behind this project is to create an affordable, reliable, and highly customizable Dual-Universe DMX interface using the ubiquitous and powerful Raspberry Pi Pico. By emulating the industry-standard **Enttec DMX USB Pro Mk2** protocol, this interface works out of the box with popular lighting control software like QLC+, without requiring any custom drivers. 
@@ -58,4 +62,22 @@ The 3D Model is composed by 3 parts and you need m3 screw to assemble it:
 - Top panel
 - USB Panel
 The position of the USB hole must be aligned with the position of the RP2040 on the PCB.
+
+## Working with QLC+
+On QLC+ you have to select Pro Mk2 in the mode menu
+
+<img width="783" height="382" alt="image" src="https://github.com/user-attachments/assets/086ca8a0-3023-481e-b22d-782d8c57f4a3" />
+
+### Issues
+The brightness of the OLED screen is not enought with daylight
+
+### Working in progress pictures
+
+A picture of the back of the PCB
+
+<img width="800" height="auto" alt="IMG_20260712_063608" src="https://github.com/user-attachments/assets/3f4ac944-2cf6-496c-8e9f-ad7a728e08b3" />
+
+Board inside the case
+
+<img width="auto" height="800" alt="IMG_20260712_063547" src="https://github.com/user-attachments/assets/71738862-c35d-46e9-b8ec-59844f80d6f3" />
 
