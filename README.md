@@ -77,13 +77,17 @@ The brightness of the OLED screen is not enought with daylight
 
 ### Working in progress pictures
 
-A picture of the back of the PCB
+#### A picture of the back of the PCB
+
+You can see the two opto-isolators 6n137 with the connected resistors.
 
 <img width="800" height="auto" alt="IMG_20260712_063608" src="https://github.com/user-attachments/assets/3f4ac944-2cf6-496c-8e9f-ad7a728e08b3" />
 
-Board inside the case.
+#### Board inside the case
 
-I use the black connectors to connect the screen and the buttons
+You can see the main board RP2040 on the right, the MAX485 modules and the B0505S on bottom-left.
+
+The black connectors are used to connect the screen and the buttons installed on the top panel.
 
 <img width="auto" height="800" alt="IMG_20260712_063547" src="https://github.com/user-attachments/assets/71738862-c35d-46e9-b8ec-59844f80d6f3" />
 
