@@ -57,7 +57,7 @@ To protect the host computer from electrical faults, ground loops, or high-volta
 
 ### Wiring Diagram
 I draw this picture after the making phase of the project, so i'm not 100% shure that it is correct, but it should be
-<img width="1593" height="812" alt="image" src="https://github.com/user-attachments/assets/deca0cd0-3b5b-4d48-bdd0-aee6335eb874" />
+<img width="1581" height="793" alt="image" src="https://github.com/user-attachments/assets/6589c935-3c96-4ace-9446-fab30562503b" />
 
 ### 3D Model
 The 3D Model is composed by 3 parts and you need m3 screw to assemble it:
