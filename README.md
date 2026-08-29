@@ -1,91 +1,175 @@
-# DMX USB Interface 2 Universe (Enttec DMX USB Pro Emulator)
-DIY DMX USB Interface with 2 Universe built around a Raspberry RP2040
-![DMX USB Node](https://github.com/user-attachments/assets/537e22e9-aa17-4ca1-b568-f043e159b057)
+<div align="center">
 
-## Motivation
-Lighting control hardware can often be expensive or difficult to customize. The motivation behind this project is to create an affordable, reliable, and highly customizable Dual-Universe DMX interface using the ubiquitous and powerful Raspberry Pi Pico. By emulating the industry-standard **Enttec DMX USB Pro Mk2** protocol, this interface works out of the box with popular lighting control software like QLC+, without requiring any custom drivers. 
+# 🎛️ DMX USB Interface — Dual Universe
 
-It also adds standalone functionality, an OLED display, and physical controls to manage your DMX setups directly from the device.
+### Enttec DMX USB Pro Mk2 Emulator · Built on Raspberry Pi Pico (RP2040)
 
-### Why USB and not ArtNet?
-My first prototype used ArtNet, however for my use cases it was more convenient to connect the PC and the interface via a USB cable rather than using a LAN cable and dealing with IP addresses and DHCP.
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-blue.svg)](LICENSE.md)
+[![Platform: RP2040](https://img.shields.io/badge/Platform-RP2040-brightgreen.svg)](#)
+[![Framework: Arduino](https://img.shields.io/badge/Framework-Arduino-00979D.svg)](#)
+[![Built with: PlatformIO](https://img.shields.io/badge/Built%20with-PlatformIO-orange.svg)](https://platformio.org/)
 
-## Features
-- **Enttec Pro Mk2 Emulation**: Native compatibility with QLC+ and other major lighting software.
-- **Dual Universe Output**: Supports two full DMX universes via MAX485 transceivers.
-- **OLED Menu System**: Integrated SSD1306 OLED display and a 4-button interface for on-device configuration.
-- **Standalone CUE Engine**: Record and store up to 10 dual-universe CUEs directly to the Pico's flash memory.
-- **Smart Disconnect Behavior**: Configurable fallback modes when USB connection is lost:
-  - Blackout
-  - Hold Last Value
-  - Play a specific recorded CUE
-- **DMX Crossfading**: Smooth transitions with configurable fade times when switching between live USB control and standalone CUEs.
-- **Advanced Routing**: Flexible routing to map Universe 1 and 2 to physical Outputs A and B.
-- **Persistent Settings**: All configuration preferences (Refresh rate, Routing, Fade time, Screensaver timeout) are saved to EEPROM.
+<br>
 
-## How to flash
-This project is built using **PlatformIO** and the Arduino framework for the Raspberry Pi Pico (Earle Philhower core).
+<img src="https://github.com/user-attachments/assets/eee21a7f-7b06-4964-9512-9229dd2f2e9b" alt="DMX USB Node" width="680">
 
-### Option 1: Direct Flash via PlatformIO (Recommended)
+<br>
+
+*A DIY, open-source, dual-universe DMX interface with an OLED menu, standalone CUE engine, and full galvanic isolation.*
+
+</div>
+
+---
+
+## 💡 Motivation
+
+Lighting control hardware is often expensive and hard to customize. This project provides an **affordable, reliable, and highly customizable** dual-universe DMX interface using the Raspberry Pi Pico.
+
+By emulating the industry-standard **Enttec DMX USB Pro Mk2** protocol, the interface works **out of the box** with popular lighting software like [QLC+](https://www.qlcplus.org/) — no custom drivers required.
+
+It also features a built-in **OLED display**, **physical controls**, and a **standalone CUE engine** for managing DMX setups directly from the device.
+
+> **Why USB instead of ArtNet?**
+> My first prototype used ArtNet, but for my use cases it was far more convenient to connect via USB rather than dealing with LAN cables, IP addresses, and DHCP configuration.
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---|---|
+| 🔌 **Enttec Pro Mk2 Emulation** | Native compatibility with QLC+ and other major lighting software |
+| 🎚️ **Dual Universe Output** | Two full DMX-512 universes via MAX485 transceivers |
+| 🖥️ **OLED Menu System** | Integrated SSD1306 display + 4-button interface for on-device control |
+| 💾 **Standalone CUE Engine** | Record and store up to 10 dual-universe CUEs to flash memory |
+| 🔀 **DMX Crossfading** | Smooth transitions with configurable fade times |
+| 🛣️ **Advanced Routing** | Flexible mapping of Universe 1/2 to physical Outputs A/B |
+| 💿 **Persistent Settings** | All preferences saved to EEPROM |
+
+### 🔌 Smart Disconnect Behavior
+
+Configurable fallback modes when USB connection is lost:
+
+- ⬛ **Blackout** — all channels go to zero
+- ⏸️ **Hold Last Value** — freeze the last DMX frame
+- 🎬 **Play CUE** — automatically trigger a stored CUE
+
+---
+
+## 🚀 How to Flash
+
+This project uses **PlatformIO** with the Arduino framework for the Raspberry Pi Pico ([Earle Philhower core](https://github.com/earlephilhower/arduino-pico)).
+
+### Option 1 — PlatformIO Upload *(Recommended)*
+
 1. Install [Visual Studio Code](https://code.visualstudio.com/) and the [PlatformIO IDE extension](https://platformio.org/).
 2. Open this project folder in VSCode.
-3. While holding the **BOOTSEL** button on your Raspberry Pi Pico, plug it into your computer via USB.
-4. Once the Pico mounts as a mass storage device, click the **Upload** button (right arrow icon) in the bottom PlatformIO toolbar. PlatformIO will compile the code and flash it automatically.
+3. Hold the **BOOTSEL** button on the Pico and plug it in via USB.
+4. Once the Pico mounts as a mass storage device, click **Upload** (→) in the PlatformIO toolbar.
 
-### Option 2: Drag and Drop (UF2)
-1. Build the project in PlatformIO by clicking the **Build** button (checkmark icon).
-2. Once the build is successful, navigate to `.pio/build/pico/` inside the project folder to find the generated `firmware.uf2` file.
-3. Hold the **BOOTSEL** button on your Pico and plug it into your computer via USB.
-4. The Pico will appear as a USB drive named `RPI-RP2`.
-5. Drag and drop the `firmware.uf2` file into the `RPI-RP2` drive. The Pico will automatically reboot and run the new firmware.
+### Option 2 — Drag & Drop (UF2)
 
-## Needed hardware
-To protect the host computer from electrical faults, ground loops, or high-voltage transients on the DMX line, the circuit implements full galvanic isolation between the USB controller and the DMX transceiver. An isolated DC-DC converter (B0505S-1W) supplies a dedicated, floating 5V rail decoupled from the RP2040’s power domain. Additionally, two high-speed 6N137 optocouplers isolate the logic signals driving the MAX485 transceiver.
+1. Build the project in PlatformIO (**Build** / ✓ icon).
+2. Find the generated `firmware.uf2` in `.pio/build/pico/`.
+3. Hold **BOOTSEL** and plug in the Pico — it appears as `RPI-RP2`.
+4. Drag and drop `firmware.uf2` onto the drive. The Pico reboots automatically.
 
-- **RP2040** [AliExpress](https://it.aliexpress.com/item/1005006087823796.html)
-- **2 MAX485 Module** [AliExpress](https://s.click.aliexpress.com/e/_c3NT3dPz)
-- **2 XLR Female Panel Connector** [AliExpress](https://s.click.aliexpress.com/e/_c4q55Lx9)
-- **2 6n137** [AliExpress](https://s.click.aliexpress.com/e/_c2JoN82B)
-- **B0505S-1W** [AliExpress](https://s.click.aliexpress.com/e/_c4KkuvZv)
-- **PCB Board** [AliExpress](https://it.aliexpress.com/item/1005006066751179.html)
-- **4 Switches** [AliExpress](https://it.aliexpress.com/item/1005005658595026.html)
-- **SSD1206 OLED** [AliExpress](https://s.click.aliexpress.com/e/_c4LZoMDz)
-- **Some resistors**
-- **3D printer** if you want to print the case, otherwise you can adapt it to a plastic box
+---
 
-### Wiring Diagram
-I draw this picture after the making phase of the project, so i'm not 100% shure that it is correct, but it should be
-![Wiring DMX node](https://github.com/user-attachments/assets/6589c935-3c96-4ace-9446-fab30562503b)
+## 🧰 Hardware
 
+The circuit implements **full galvanic isolation** between the USB controller and the DMX transceiver to protect the host computer from electrical faults, ground loops, and high-voltage transients.
 
-### 3D Model
-The 3D Model is composed by 3 parts and you need m3 screw to assemble it:
-- [Case](./3DModels/Case.stl)
-- [Top panel](./3DModels/Top%20Panel.stl)
-- [USB Panel](./3DModels/USB%20Panel.stl)
+An isolated DC-DC converter (**B0505S-1W**) supplies a dedicated floating 5 V rail, and two high-speed **6N137** optocouplers isolate the logic signals driving the MAX485.
 
-The position of the USB hole must be aligned with the position of the RP2040 on the PCB, if you use the same PCB and you place the RP2040 board on the edge of the PCB, the hole should match.
+### Bill of Materials
 
-## Working with QLC+
-On QLC+ you have to select Pro Mk2 in the mode menu
+| # | Component | Link |
+|:-:|---|---|
+| 1 | **Raspberry Pi Pico (RP2040)** | [AliExpress](https://it.aliexpress.com/item/1005006087823796.html) |
+| 2 | **MAX485 Transceiver Module** ×2 | [AliExpress](https://s.click.aliexpress.com/e/_c3NT3dPz) |
+| 3 | **XLR 3-Pin Female Panel Connector** ×2 | [AliExpress](https://s.click.aliexpress.com/e/_c4q55Lx9) |
+| 4 | **6N137 High-Speed Optocoupler** ×2 | [AliExpress](https://s.click.aliexpress.com/e/_c2JoN82B) |
+| 5 | **B0505S-1W Isolated DC-DC Converter** | [AliExpress](https://s.click.aliexpress.com/e/_c4KkuvZv) |
+| 6 | **Perfboard / PCB** | [AliExpress](https://it.aliexpress.com/item/1005006066751179.html) |
+| 7 | **Tactile Push Buttons** ×4 | [AliExpress](https://it.aliexpress.com/item/1005005658595026.html) |
+| 8 | **SSD1306 0.96″ OLED Display** | [AliExpress](https://s.click.aliexpress.com/e/_c4LZoMDz) |
+| 9 | **Assorted Resistors** | — |
+| 10 | **3D Printed Case** *(optional)* | See below |
 
-![image](https://github.com/user-attachments/assets/086ca8a0-3023-481e-b22d-782d8c57f4a3)
+---
 
-### Issues
-The brightness of the OLED screen is not enought with daylight
+### 📐 Wiring Diagram
 
-### Working in progress pictures
+> [!NOTE]
+> This diagram was drawn after the build, so minor inaccuracies are possible — but it should be correct.
 
-#### A picture of the back of the PCB
+<div align="center">
+<img src="https://github.com/user-attachments/assets/6589c935-3c96-4ace-9446-fab30562503b" alt="Wiring Diagram" width="700">
+</div>
 
-You can see the two opto-isolators 6n137 with the connected resistors.
+---
 
-![image](https://github.com/user-attachments/assets/3f4ac944-2cf6-496c-8e9f-ad7a728e08b3)
+### 🖨️ 3D Printed Case
 
-#### Board inside the case
+The enclosure is composed of 3 parts and uses **M3 screws** for assembly:
 
-You can see the main board RP2040 on the right, the MAX485 modules and the B0505S on bottom-left.
+| Part | File |
+|---|---|
+| Case | [`Case.stl`](./3DModels/Case.stl) |
+| Top Panel | [`Top Panel.stl`](./3DModels/Top%20Panel.stl) |
+| USB Panel | [`USB Panel.stl`](./3DModels/USB%20Panel.stl) |
 
-The black connectors are used to connect the screen and the buttons installed on the top panel.
+> [!IMPORTANT]
+> The USB hole position must be aligned with the RP2040 on the PCB. If you use the same perfboard and place the Pico board flush against the edge, the hole should match.
 
-![image](https://github.com/user-attachments/assets/7fa5aae5-fd82-4504-83bd-81ee71573622)
+---
+
+## 🖥️ Working with QLC+
+
+In QLC+, select **Pro Mk2** in the mode menu:
+
+<div align="center">
+<img src="https://github.com/user-attachments/assets/086ca8a0-3023-481e-b22d-782d8c57f4a3" alt="QLC+ Pro Mk2 Mode Selection" width="500">
+</div>
+
+---
+
+## ⚠️ Known Issues
+
+- The OLED screen brightness is not sufficient in direct daylight.
+
+---
+
+## 📷 Build Gallery
+
+<details>
+<summary><strong>Click to expand build photos</strong></summary>
+
+<br>
+
+#### Back of the PCB
+
+The two opto-isolators (6N137) with their associated pull-up resistors.
+
+<div align="center">
+<img src="https://github.com/user-attachments/assets/3f4ac944-2cf6-496c-8e9f-ad7a728e08b3" alt="Back of the PCB — Opto-isolators" width="550">
+</div>
+
+<br>
+
+#### Board Inside the Case
+
+The RP2040 on the right, MAX485 modules and B0505S on the bottom-left. Black connectors carry the OLED and button signals from the top panel.
+
+<div align="center">
+<img src="https://github.com/user-attachments/assets/71738862-c35d-46e9-b8ec-59844f80d6f3" alt="Board inside the 3D printed case" width="550">
+</div>
+
+</details>
+
+---
+
+## 📄 License
+
+This project is licensed under the [Creative Commons BY-NC-SA 4.0](LICENSE.md) license.
