@@ -34,6 +34,20 @@ It also features a built-in **OLED display**, **physical controls**, and a **sta
 
 ---
 
+## 📺 Demo
+
+Menu navigation and node introduction:
+
+<div align="center">
+
+[![Watch the demo on YouTube](https://img.youtube.com/vi/CNQFU6lT2Z0/maxresdefault.jpg)](https://youtu.be/CNQFU6lT2Z0)
+
+*▶️ Click the image above to watch the video on YouTube*
+
+</div>
+
+---
+
 ## ✨ Features
 
 | Feature | Description |
