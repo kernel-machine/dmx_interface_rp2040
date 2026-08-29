@@ -11,7 +11,7 @@
 
 <br>
 
-<img src="https://github.com/user-attachments/assets/eee21a7f-7b06-4964-9512-9229dd2f2e9b" alt="DMX USB Node" width="680">
+<img src="./resources/node_picture.jpeg" alt="DMX USB Node" width="680">
 
 <br>
 
@@ -105,7 +105,7 @@ An isolated DC-DC converter (**B0505S-1W**) supplies a dedicated floating 5 V ra
 > This diagram was drawn after the build, so minor inaccuracies are possible — but it should be correct.
 
 <div align="center">
-<img src="https://github.com/user-attachments/assets/6589c935-3c96-4ace-9446-fab30562503b" alt="Wiring Diagram" width="700">
+<img src="./resources/wiring_circuit.png" alt="Wiring Diagram" width="700">
 </div>
 
 ---
@@ -130,7 +130,7 @@ The enclosure is composed of 3 parts and uses **M3 screws** for assembly:
 In QLC+, select **Pro Mk2** in the mode menu:
 
 <div align="center">
-<img src="https://github.com/user-attachments/assets/086ca8a0-3023-481e-b22d-782d8c57f4a3" alt="QLC+ Pro Mk2 Mode Selection" width="500">
+<img src="./resources/qlc_setting.png" alt="QLC+ Pro Mk2 Mode Selection" width="500">
 </div>
 
 ---
@@ -153,7 +153,7 @@ In QLC+, select **Pro Mk2** in the mode menu:
 The two opto-isolators (6N137) with their associated pull-up resistors.
 
 <div align="center">
-<img src="https://github.com/user-attachments/assets/3f4ac944-2cf6-496c-8e9f-ad7a728e08b3" alt="Back of the PCB — Opto-isolators" width="550">
+<img src="./resources/back_circuit.jpg" alt="Back of the PCB — Opto-isolators" width="550">
 </div>
 
 <br>
@@ -163,7 +163,7 @@ The two opto-isolators (6N137) with their associated pull-up resistors.
 The RP2040 on the right, MAX485 modules and B0505S on the bottom-left. Black connectors carry the OLED and button signals from the top panel.
 
 <div align="center">
-<img src="https://github.com/user-attachments/assets/71738862-c35d-46e9-b8ec-59844f80d6f3" alt="Board inside the 3D printed case" width="550">
+<img src="./resources/inside_the_node.jpg" alt="Board inside the 3D printed case" width="550">
 </div>
 
 </details>
