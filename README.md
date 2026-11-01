@@ -108,19 +108,20 @@ An isolated DC-DC converter (**B0505S-1W**) supplies a dedicated floating 5 V ra
 | 6 | **Perfboard / PCB** | [AliExpress](https://it.aliexpress.com/item/1005006066751179.html) |
 | 7 | **Tactile Push Buttons** ×4 | [AliExpress](https://it.aliexpress.com/item/1005005658595026.html) |
 | 8 | **SSD1306 0.96″ OLED Display** | [AliExpress](https://s.click.aliexpress.com/e/_c4LZoMDz) |
-| 9 | **Assorted Resistors** | — |
+| 9 | **Assorted Resistors and capacitors** | — |
 | 10 | **3D Printed Case** *(optional)* | See below |
 
 ---
 
 ### 📐 Wiring Diagram
 
-> [!NOTE]
-> This diagram was drawn after the build, so minor inaccuracies are possible — but it should be correct.
-
 <div align="center">
 <img src="./resources/wiring_circuit.png" alt="Wiring Diagram" width="700">
 </div>
+
+C2 and C4 are electrolytic capacitor
+
+C1, C3, C5, C6 are ceramic capacitor, since for them are required a lower ESR.
 
 ---
 
@@ -164,7 +165,7 @@ In QLC+, select **Pro Mk2** in the mode menu:
 
 #### Back of the PCB
 
-The two opto-isolators (6N137) with their associated pull-up resistors.
+The two opto-isolators (6N137) with their associated pull-up resistors. In this picture capacitors are missed.
 
 <div align="center">
 <img src="./resources/back_circuit.jpg" alt="Back of the PCB — Opto-isolators" width="550">
